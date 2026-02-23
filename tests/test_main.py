@@ -1,12 +1,15 @@
+import runpy
 from unittest.mock import patch
+
 from banking_transactions_analytics.main import main
 
-import runpy
 
 def test_main_runs():
-    with patch("banking_transactions_analytics.main.load_transactions_from_excel") as mock_load, \
-         patch("banking_transactions_analytics.main.main_page") as mock_page, \
-         patch("builtins.print") as mock_print:
+    with (
+        patch("banking_transactions_analytics.main.load_transactions_from_excel") as mock_load,
+        patch("banking_transactions_analytics.main.main_page") as mock_page,
+        patch("builtins.print") as mock_print,
+    ):
 
         mock_load.return_value = "fake_df"
         mock_page.return_value = "{}"

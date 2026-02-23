@@ -2,11 +2,12 @@ import json
 import logging
 from datetime import datetime
 
+import pandas as pd
+
 from banking_transactions_analytics.utils import (
-    load_transactions_from_excel,
-    get_greeting,
-    filter_transactions_by_period,
     calculate_cards_summary,
+    filter_transactions_by_period,
+    get_greeting,
     get_top_transactions,
 )
 

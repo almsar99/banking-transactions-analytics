@@ -1,7 +1,8 @@
+from unittest.mock import patch
+
 import pandas as pd
 
-from banking_transactions_analytics.reports import spending_by_category, save_report
-from unittest.mock import patch
+from banking_transactions_analytics.reports import save_report, spending_by_category
 
 
 def test_spending_by_category_basic() -> None:

@@ -1,4 +1,5 @@
 import json
+
 import pandas as pd
 
 from banking_transactions_analytics.views import main_page

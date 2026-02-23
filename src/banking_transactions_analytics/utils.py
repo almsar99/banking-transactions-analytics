@@ -37,10 +37,7 @@ def filter_transactions_by_period(
 
     start_of_month = dt.replace(day=1)
 
-    return df[
-        (df["Дата операции"] >= start_of_month)
-        & (df["Дата операции"] <= dt)
-    ]
+    return df[(df["Дата операции"] >= start_of_month) & (df["Дата операции"] <= dt)]
 
 
 def calculate_cards_summary(df: pd.DataFrame) -> list[dict[str, float | str]]:
@@ -52,12 +49,7 @@ def calculate_cards_summary(df: pd.DataFrame) -> list[dict[str, float | str]]:
 
     df = df[df["Сумма операции"] < 0]
 
-    grouped = (
-        df.groupby("Номер карты")["Сумма операции"]
-        .sum()
-        .abs()
-        .reset_index()
-    )
+    grouped = df.groupby("Номер карты")["Сумма операции"].sum().abs().reset_index()
 
     result: list[dict[str, float | str]] = []
 
@@ -120,4 +112,3 @@ def load_transactions_from_excel(path: str) -> pd.DataFrame:
     df = pd.read_excel(path)
 
     return df
-

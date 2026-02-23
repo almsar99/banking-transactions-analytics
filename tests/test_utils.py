@@ -1,12 +1,13 @@
 from datetime import datetime
-from banking_transactions_analytics.utils import (
-    get_greeting,
-    filter_transactions_by_period,
-    calculate_cards_summary,
-    get_top_transactions,
-)
 
 import pandas as pd
+
+from banking_transactions_analytics.utils import (
+    calculate_cards_summary,
+    filter_transactions_by_period,
+    get_greeting,
+    get_top_transactions,
+)
 
 
 def test_get_greeting_morning() -> None:
