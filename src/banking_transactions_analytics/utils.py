@@ -1,16 +1,45 @@
+import json
 import logging
+import os
 from datetime import datetime
+from pathlib import Path
+from typing import TypedDict, cast
 
 import pandas as pd
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+FMP_API_KEY = os.getenv("FMP_API_KEY")
+
+
+# =========================
+# TypedDict definitions
+# =========================
+
+
+class CurrencyRate(TypedDict):
+    currency: str
+    rate: float
+
+
+class StockPrice(TypedDict):
+    stock: str
+    price: float
+
+
+# =========================
+# Core helpers
+# =========================
 
 
 def get_greeting(dt: datetime) -> str:
     """
     Returns greeting based on time of day.
     """
-
     hour = dt.hour
 
     if 5 <= hour < 12:
@@ -33,7 +62,12 @@ def filter_transactions_by_period(
     logger.info("Filtering transactions for main page period")
 
     df = df.copy()
-    df["Дата операции"] = pd.to_datetime(df["Дата операции"])
+
+    df["Дата операции"] = pd.to_datetime(
+        df["Дата операции"],
+        format="mixed",
+        errors="coerce",
+    )
 
     start_of_month = dt.replace(day=1)
 
@@ -77,9 +111,11 @@ def get_top_transactions(df: pd.DataFrame) -> list[dict[str, str | float]]:
     logger.info("Calculating top transactions")
 
     df = df.copy()
+
     df["Дата операции"] = pd.to_datetime(
         df["Дата операции"],
-        dayfirst=True,
+        format="mixed",
+        errors="coerce",
     )
 
     top = df.sort_values(by="Сумма платежа", ascending=False).head(5)
@@ -91,15 +127,17 @@ def get_top_transactions(df: pd.DataFrame) -> list[dict[str, str | float]]:
             {
                 "date": row["Дата операции"].strftime("%d.%m.%Y"),
                 "amount": float(row["Сумма платежа"]),
-                "category": row["Категория"],
-                "description": row["Описание"],
+                "category": str(row["Категория"]),
+                "description": str(row["Описание"]),
             }
         )
 
     return result
 
 
-logger = logging.getLogger(__name__)
+# =========================
+# Data loading
+# =========================
 
 
 def load_transactions_from_excel(path: str) -> pd.DataFrame:
@@ -108,7 +146,84 @@ def load_transactions_from_excel(path: str) -> pd.DataFrame:
     """
 
     logger.info("Loading transactions from Excel: %s", path)
+    return pd.read_excel(path)
 
-    df = pd.read_excel(path)
 
-    return df
+def load_user_settings(path: str = "user_settings.json") -> dict[str, list[str]]:
+    """
+    Loads user settings from JSON file.
+    """
+
+    with open(Path(path), encoding="utf-8") as file:
+        data = json.load(file)
+
+    return cast(dict[str, list[str]], data)
+
+
+# =========================
+# API integration (FMP)
+# =========================
+
+
+def get_currency_rates(currencies: list[str]) -> list[CurrencyRate]:
+    """
+    Fetches currency rates from Financial Modeling Prep API.
+    """
+
+    if not FMP_API_KEY:
+        logger.warning("FMP_API_KEY not found")
+        return []
+
+    result: list[CurrencyRate] = []
+
+    try:
+        url = f"https://financialmodelingprep.com/api/v3/quote/" f"{','.join(currencies)}?apikey={FMP_API_KEY}"
+
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+
+        for item in data:
+            result.append(
+                {
+                    "currency": str(item["symbol"]),
+                    "rate": round(float(item["price"]), 2),
+                }
+            )
+
+    except requests.RequestException as error:
+        logger.error("Currency fetch error: %s", error)
+
+    return result
+
+
+def get_stock_prices(stocks: list[str]) -> list[StockPrice]:
+    """
+    Fetches stock prices from Financial Modeling Prep API.
+    """
+
+    if not FMP_API_KEY:
+        logger.warning("FMP_API_KEY not found")
+        return []
+
+    result: list[StockPrice] = []
+
+    try:
+        url = f"https://financialmodelingprep.com/api/v3/quote/" f"{','.join(stocks)}?apikey={FMP_API_KEY}"
+
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+
+        for item in data:
+            result.append(
+                {
+                    "stock": str(item["symbol"]),
+                    "price": float(item["price"]),
+                }
+            )
+
+    except requests.RequestException as error:
+        logger.error("Stock fetch error: %s", error)
+
+    return result
