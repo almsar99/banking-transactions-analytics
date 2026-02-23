@@ -1,6 +1,8 @@
 from datetime import datetime
+from unittest.mock import patch
 
 import pandas as pd
+import requests
 
 from banking_transactions_analytics.utils import (
     calculate_cards_summary,
@@ -51,7 +53,6 @@ def test_filter_transactions_by_period() -> None:
 
 
 def test_calculate_cards_summary() -> None:
-    import pandas as pd
 
     data = pd.DataFrame(
         {
@@ -109,3 +110,76 @@ def test_load_transactions_from_excel(tmp_path):
 
     assert len(df_loaded) == 3
     assert list(df_loaded.columns) == ["A"]
+
+
+@patch("banking_transactions_analytics.utils.requests.get")
+def test_get_currency_rates_api_error(mock_get):
+    mock_get.side_effect = requests.exceptions.RequestException()
+
+    from banking_transactions_analytics.utils import get_currency_rates
+
+    result = get_currency_rates(["USD"])
+    assert result == []
+
+
+def test_get_currency_rates_no_api_key(monkeypatch):
+    from banking_transactions_analytics import utils
+
+    monkeypatch.setattr(utils, "FMP_API_KEY", None)
+
+    result = utils.get_currency_rates(["USD"])
+    assert result == []
+
+
+@patch("banking_transactions_analytics.utils.requests.get")
+def test_get_currency_rates_empty_response(mock_get):
+    mock_get.return_value.json.return_value = {}
+    mock_get.return_value.raise_for_status.return_value = None
+
+    from banking_transactions_analytics.utils import get_currency_rates
+
+    result = get_currency_rates(["USD"])
+    assert result == []
+
+
+@patch("banking_transactions_analytics.utils.requests.get")
+def test_get_stock_prices_api_error(mock_get):
+    import requests
+
+    mock_get.side_effect = requests.exceptions.RequestException()
+
+    from banking_transactions_analytics.utils import get_stock_prices
+
+    result = get_stock_prices(["AAPL"])
+    assert result == []
+
+
+@patch("banking_transactions_analytics.utils.requests.get")
+def test_get_currency_rates_success(mock_get):
+    mock_get.return_value.raise_for_status.return_value = None
+    mock_get.return_value.json.return_value = [{"symbol": "USD", "price": 90.5}]
+
+    from banking_transactions_analytics.utils import get_currency_rates
+
+    result = get_currency_rates(["USD"])
+    assert result == [{"currency": "USD", "rate": 90.5}]
+
+
+def test_get_stock_prices_no_api_key(monkeypatch):
+    from banking_transactions_analytics import utils
+
+    monkeypatch.setattr(utils, "FMP_API_KEY", None)
+
+    result = utils.get_stock_prices(["AAPL"])
+    assert result == []
+
+
+@patch("banking_transactions_analytics.utils.requests.get")
+def test_get_stock_prices_success(mock_get):
+    mock_get.return_value.raise_for_status.return_value = None
+    mock_get.return_value.json.return_value = [{"symbol": "AAPL", "price": 150.0}]
+
+    from banking_transactions_analytics.utils import get_stock_prices
+
+    result = get_stock_prices(["AAPL"])
+    assert result == [{"stock": "AAPL", "price": 150.0}]
