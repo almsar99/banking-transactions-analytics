@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import Callable, Optional, TypeVar, Any
+from typing import Any, Callable, Optional, TypeVar
 
 import pandas as pd
 
